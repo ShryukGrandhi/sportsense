@@ -1,0 +1,37 @@
+[
+  {
+    "event_id": "evt_001",
+    "game_id": "nfl_2024_sea_hou_001",
+    "timestamp": 425.0,
+    "event_type": "touchdown",
+    "description": "Kenneth Walker III rushes for 15-yard touchdown",
+    "team": "Seahawks",
+    "player": "Kenneth Walker III",
+    "stats": {
+      "value": 6,
+      "yards": 15,
+      "situation": "score_differential_trailing",
+      "quarter": 2,
+      "time_remaining": "5:23",
+      "score_home": 21,
+      "score_away": 17
+    }
+  },
+  {
+    "event_id": "evt_002",
+    "game_id": "nfl_2024_sea_hou_001",
+    "timestamp": 850.0,
+    "event_type": "interception",
+    "description": "Devon Witherspoon with crucial interception",
+    "team": "Seahawks",
+    "player": "Devon Witherspoon",
+    "stats": {
+      "value": 1,
+      "situation": "clutch_time_winning_drive",
+      "quarter": 4,
+      "time_remaining": "1:47",
+      "score_home": 24,
+      "score_away": 21
+    }
+  }
+]

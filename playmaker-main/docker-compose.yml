@@ -1,0 +1,74 @@
+version: '3.8'
+
+services:
+  # MongoDB Database
+  mongodb:
+    image: mongo:7.0
+    container_name: playmaker-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-changeme}
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - playmaker-network
+
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: playmaker-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      # MongoDB connection
+      MONGO_URL: mongodb://${MONGO_USER:-admin}:${MONGO_PASSWORD:-changeme}@mongodb:27017/playmaker?authSource=admin
+
+      # JWT Secret
+      JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key-change-in-production}
+
+      # API Keys
+      HIGHLIGHTLY_API_KEY: ${HIGHLIGHTLY_API_KEY}
+      PPLX_API_KEY: ${PPLX_API_KEY}
+      PERPLEXITY_API_KEY: ${PERPLEXITY_API_KEY}
+      SPORTRADAR_API_KEY: ${SPORTRADAR_API_KEY}
+
+      # Optional: Skip validation for development
+      # SKIP_ENV_VALIDATION: "false"
+      # DISABLE_BACKGROUND_TASKS: "false"
+    depends_on:
+      - mongodb
+    volumes:
+      - ./backend:/app
+    networks:
+      - playmaker-network
+
+  # Frontend React App
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: playmaker-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    environment:
+      # Backend API URL - change this to your domain in production
+      REACT_APP_API_URL: ${REACT_APP_API_URL:-http://localhost:8000/api}
+    depends_on:
+      - backend
+    networks:
+      - playmaker-network
+
+networks:
+  playmaker-network:
+    driver: bridge
+
+volumes:
+  mongodb_data:
+    driver: local

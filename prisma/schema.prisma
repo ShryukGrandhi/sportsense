@@ -1,0 +1,76 @@
+// Prisma schema for Playmaker
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String    @id @default(cuid())
+  email           String?   @unique
+  phoneNumber     String?   @unique
+  favoriteTeams   String[]  @default([])
+  favoritePlayers String[]  @default([])
+  favoriteLeagues String[]  @default(["NFL", "NBA"])
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  pulseEntries    PulseEntry[]
+  chatSessions    ChatSession[]
+  notifications   NotificationPreference[]
+}
+
+model PulseEntry {
+  id          String   @id @default(cuid())
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id])
+  gameId      String
+  league      String
+  rawMetaJson Json?
+  createdAt   DateTime @default(now())
+}
+
+model NotificationPreference {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id])
+  teamId          String?
+  playerId        String?
+  tag             String?  // e.g., "touchdown", "big-play", "game-start", "game-end"
+  type            String   // "team", "player", "event"
+  enabled         Boolean  @default(true)
+  quietHoursStart Int?     // Hour in 24h format (0-23)
+  quietHoursEnd   Int?     // Hour in 24h format (0-23)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model ChatSession {
+  id        String        @id @default(cuid())
+  userId    String?
+  user      User?         @relation(fields: [userId], references: [id])
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  messages  ChatMessage[]
+}
+
+model ChatMessage {
+  id            String      @id @default(cuid())
+  chatSessionId String
+  chatSession   ChatSession @relation(fields: [chatSessionId], references: [id])
+  role          String      // "user", "assistant", "system"
+  content       String      @db.Text
+  visualContext Json?       // Structured data for rendering cards
+  createdAt     DateTime    @default(now())
+}
+
+model SportsCache {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  data      Json
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}

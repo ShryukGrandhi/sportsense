@@ -1,0 +1,11 @@
+# Nixpacks configuration for Railway deployment
+[phases.setup]
+nixPkgs = ["python311", "gcc", "g++"]
+
+[phases.install]
+cmds = ["pip install -r backend/requirements.txt || (sed '/^emergentintegrations==/d' backend/requirements.txt > requirements.prod.txt && pip install -r requirements.prod.txt)"]
+
+[phases.build]
+
+[start]
+cmd = "cd backend && uvicorn server:app --host 0.0.0.0 --port $PORT"

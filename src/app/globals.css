@@ -1,0 +1,431 @@
+@import "tailwindcss";
+
+/* Playmaker Design System */
+:root {
+  /* Core Colors */
+  --background: #0a0f1a;
+  --background-secondary: #111827;
+  --foreground: #f8fafc;
+  --foreground-muted: #94a3b8;
+
+  /* Accent Colors */
+  --accent-primary: #6366f1;
+  --accent-secondary: #8b5cf6;
+  --accent-tertiary: #06b6d4;
+
+  /* Position Colors */
+  --color-qb: #3b82f6;
+  --color-rb: #ec4899;
+  --color-wr: #a855f7;
+  --color-te: #f97316;
+  --color-defense: #10b981;
+
+  /* NBA Position Colors */
+  --color-pg: #3b82f6;
+  --color-sg: #06b6d4;
+  --color-sf: #8b5cf6;
+  --color-pf: #f97316;
+  --color-c: #ef4444;
+
+  /* Status Colors */
+  --color-live: #22c55e;
+  --color-final: #64748b;
+  --color-scheduled: #f59e0b;
+
+  /* UI Colors */
+  --card-bg: rgba(30, 41, 59, 0.8);
+  --card-border: rgba(148, 163, 184, 0.1);
+  --card-glow: rgba(99, 102, 241, 0.3);
+  --input-bg: rgba(15, 23, 42, 0.8);
+
+  /* Gradients */
+  --gradient-primary: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%);
+  --gradient-dark: linear-gradient(180deg, #0a0f1a 0%, #1e293b 100%);
+  --gradient-card: linear-gradient(145deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.9) 100%);
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -4px rgba(0, 0, 0, 0.4);
+  --shadow-glow: 0 0 20px rgba(99, 102, 241, 0.4);
+
+  /* Spacing */
+  --radius-sm: 0.375rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.5rem;
+  --radius-full: 9999px;
+
+  /* Shadcn Theme Variables (HSL format) */
+  --radius: 0.5rem;
+  --background-hsl: 222 47% 5%;
+  --foreground-hsl: 210 40% 98%;
+  --card-hsl: 222 47% 7%;
+  --card-foreground-hsl: 210 40% 98%;
+  --popover-hsl: 222 47% 7%;
+  --popover-foreground-hsl: 210 40% 98%;
+  --primary-hsl: 238 84% 67%;
+  --primary-foreground-hsl: 210 40% 98%;
+  --secondary-hsl: 217 33% 17%;
+  --secondary-foreground-hsl: 210 40% 98%;
+  --muted-hsl: 217 33% 17%;
+  --muted-foreground-hsl: 215 20% 65%;
+  --accent-hsl: 217 33% 17%;
+  --accent-foreground-hsl: 210 40% 98%;
+  --destructive-hsl: 0 63% 31%;
+  --destructive-foreground-hsl: 210 40% 98%;
+  --border-hsl: 217 33% 17%;
+  --input-hsl: 217 33% 17%;
+  --ring-hsl: 238 84% 67%;
+  --chart-1-hsl: 220 70% 50%;
+  --chart-2-hsl: 160 60% 45%;
+  --chart-3-hsl: 30 80% 55%;
+  --chart-4-hsl: 280 65% 60%;
+  --chart-5-hsl: 340 75% 55%;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-display: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+/* Base Styles */
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--gradient-dark);
+  background-attachment: fixed;
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Animated Background */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background:
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(99, 102, 241, 0.15), transparent),
+    radial-gradient(ellipse 60% 40% at 100% 0%, rgba(139, 92, 246, 0.1), transparent),
+    radial-gradient(ellipse 60% 40% at 0% 100%, rgba(6, 182, 212, 0.1), transparent);
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* Typography */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+h1 {
+  font-size: 2.5rem;
+}
+
+h2 {
+  font-size: 2rem;
+}
+
+h3 {
+  font-size: 1.5rem;
+}
+
+h4 {
+  font-size: 1.25rem;
+}
+
+/* Card Base */
+.card {
+  background: var(--gradient-card);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-lg);
+  backdrop-filter: blur(10px);
+  box-shadow: var(--shadow-md);
+  transition: all 0.3s ease;
+}
+
+.card:hover {
+  border-color: rgba(99, 102, 241, 0.3);
+  box-shadow: var(--shadow-lg), var(--shadow-glow);
+  transform: translateY(-2px);
+}
+
+/* Glowing border effect */
+.glow-border {
+  position: relative;
+}
+
+.glow-border::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: var(--gradient-primary);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.glow-border:hover::before {
+  opacity: 1;
+}
+
+/* Button Styles */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  font-weight: 600;
+  border-radius: var(--radius-full);
+  transition: all 0.2s ease;
+  cursor: pointer;
+  border: none;
+  outline: none;
+}
+
+.btn-primary {
+  background: var(--gradient-primary);
+  color: white;
+  box-shadow: var(--shadow-md);
+}
+
+.btn-primary:hover {
+  transform: scale(1.02);
+  box-shadow: var(--shadow-lg), 0 0 30px rgba(99, 102, 241, 0.5);
+}
+
+.btn-secondary {
+  background: var(--card-bg);
+  color: var(--foreground);
+  border: 1px solid var(--card-border);
+}
+
+.btn-secondary:hover {
+  border-color: var(--accent-primary);
+  background: rgba(99, 102, 241, 0.1);
+}
+
+/* Input Styles */
+.input {
+  width: 100%;
+  padding: 0.875rem 1rem;
+  background: var(--input-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-md);
+  color: var(--foreground);
+  font-size: 1rem;
+  transition: all 0.2s ease;
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+}
+
+.input::placeholder {
+  color: var(--foreground-muted);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.3);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.5);
+}
+
+/* Position Badge Colors */
+.badge-qb {
+  background: var(--color-qb);
+}
+
+.badge-rb {
+  background: var(--color-rb);
+}
+
+.badge-wr {
+  background: var(--color-wr);
+}
+
+.badge-te {
+  background: var(--color-te);
+}
+
+.badge-defense {
+  background: var(--color-defense);
+}
+
+.badge-pg {
+  background: var(--color-pg);
+}
+
+.badge-sg {
+  background: var(--color-sg);
+}
+
+.badge-sf {
+  background: var(--color-sf);
+}
+
+.badge-pf {
+  background: var(--color-pf);
+}
+
+.badge-c {
+  background: var(--color-c);
+}
+
+/* Status Badges */
+.status-live {
+  color: var(--color-live);
+  animation: pulse 2s infinite;
+}
+
+.status-final {
+  color: var(--color-final);
+}
+
+.status-scheduled {
+  color: var(--color-scheduled);
+}
+
+/* Pulse Animation */
+@keyframes pulse {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Breathing Glow Animation */
+@keyframes breathe {
+
+  0%,
+  100% {
+    box-shadow: 0 0 20px rgba(99, 102, 241, 0.3);
+    transform: scale(1);
+  }
+
+  50% {
+    box-shadow: 0 0 40px rgba(99, 102, 241, 0.5);
+    transform: scale(1.02);
+  }
+}
+
+.breathing-glow {
+  animation: breathe 3s ease-in-out infinite;
+}
+
+/* Expanding Rings Animation */
+@keyframes expandRing {
+  0% {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+
+  100% {
+    transform: scale(2.5);
+    opacity: 0;
+  }
+}
+
+.expanding-ring {
+  animation: expandRing 2s ease-out infinite;
+}
+
+/* Score Bump Animation */
+@keyframes scoreBump {
+
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.15);
+  }
+}
+
+.score-bump {
+  animation: scoreBump 0.3s ease-out;
+}
+
+/* Fade In Up Animation */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in-up {
+  animation: fadeInUp 0.5s ease-out forwards;
+}
+
+/* Skeleton Loading */
+.skeleton {
+  background: linear-gradient(90deg,
+      var(--card-bg) 25%,
+      rgba(148, 163, 184, 0.1) 50%,
+      var(--card-bg) 75%);
+  background-size: 200% 100%;
+  animation: skeleton-loading 1.5s infinite;
+  border-radius: var(--radius-sm);
+}
+
+@keyframes skeleton-loading {
+  0% {
+    background-position: 200% 0;
+  }
+
+  100% {
+    background-position: -200% 0;
+  }
+}
