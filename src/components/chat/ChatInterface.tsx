@@ -3,10 +3,12 @@
 import { useState, useRef, useEffect, FormEvent } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '../ui';
-import { PlayerCard, ScoreboardCard } from '../cards';
-import { VisualCard, ChatMessage } from '@/lib/sports/types';
+import { PlayerCard, ScoreboardCard, ComparisonCard } from '../cards';
+import { VisualCard, ChatMessage, Game, PlayerGameStats, StatComparisonCardData } from '@/lib/sports/types';
 import clsx from 'clsx';
 import { Send, Sparkles } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 interface ChatInterfaceProps {
     onSendMessage?: (message: string) => Promise<{
@@ -195,12 +197,45 @@ function ChatBubble({ message, index }: ChatBubbleProps) {
                     'max-w-[85%] rounded-2xl px-4 py-2.5',
                     isUser
                         ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white'
-                        : 'bg-slate-800 text-slate-100'
+                        : 'bg-transparent text-slate-100 min-w-[300px] w-full p-0 flex-1'
                 )}
             >
-                <p className="text-sm leading-relaxed whitespace-pre-wrap">
-                    {message.content}
-                </p>
+                {isUser ? (
+                    <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                        {message.content}
+                    </p>
+                ) : (
+                    <div className="bg-slate-950 rounded-2xl border border-indigo-500/20 shadow-xl overflow-hidden min-w-[350px]">
+                        {/* Widget Header */}
+                        <div className="bg-slate-900/50 px-4 py-2 border-b border-indigo-500/10 flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
+                            <span className="text-[10px] font-bold text-indigo-300 uppercase tracking-widest">Live Analysis</span>
+                        </div>
+                        <div className="p-4 text-sm space-y-2">
+                            <ReactMarkdown
+                                remarkPlugins={[remarkGfm]}
+                                components={{
+                                    h3: ({ node, ...props }) => (
+                                        <div className="bg-slate-900 rounded-lg px-3 py-2 font-bold text-indigo-300 mt-2 mb-2 flex items-center gap-2 border border-slate-800">
+                                            <span {...props} />
+                                        </div>
+                                    ),
+                                    p: ({ node, ...props }) => <p className="leading-relaxed text-slate-300" {...props} />,
+                                    ul: ({ node, ...props }) => <ul className="space-y-2 my-2" {...props} />,
+                                    li: ({ node, children, ...props }) => (
+                                        <li className="flex gap-2 items-start bg-slate-900/30 p-2 rounded-lg border border-white/5" {...props}>
+                                            <span className="text-indigo-500 mt-1 text-[0.6rem]">●</span>
+                                            <span className="flex-1">{children}</span>
+                                        </li>
+                                    ),
+                                    strong: ({ node, ...props }) => <span className="font-semibold text-white" {...props} />
+                                }}
+                            >
+                                {message.content}
+                            </ReactMarkdown>
+                        </div>
+                    </div>
+                )}
             </div>
         </motion.div>
     );
@@ -213,15 +248,16 @@ interface VisualCanvasProps {
 function VisualCanvas({ cards }: VisualCanvasProps) {
     if (cards.length === 0) {
         return (
-            <div className="h-full min-h-[400px] rounded-xl border border-dashed border-slate-700 flex items-center justify-center">
+            <div className="h-full min-h-[400px] rounded-xl border border-dashed border-slate-700 flex items-center justify-center bg-slate-900/20">
                 <div className="text-center">
                     <div className="w-20 h-20 mx-auto mb-4 rounded-xl bg-slate-800/50 flex items-center justify-center">
-                        <svg className="w-10 h-10 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                        </svg>
+                        <Sparkles className="w-10 h-10 text-slate-600 opacity-50" />
                     </div>
-                    <p className="text-slate-500">
-                        Stats and cards will appear here
+                    <p className="text-slate-500 font-medium">
+                        Visual Insights
+                    </p>
+                    <p className="text-slate-600 text-xs mt-1">
+                        Ask comparisons or stats to see cards
                     </p>
                 </div>
             </div>
@@ -233,7 +269,7 @@ function VisualCanvas({ cards }: VisualCanvasProps) {
             <AnimatePresence mode="popLayout">
                 {cards.map((card, index) => (
                     <motion.div
-                        key={card.id}
+                        key={card.id || index}
                         initial={{ opacity: 0, x: 20 }}
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: -20 }}
@@ -253,12 +289,15 @@ function VisualCanvas({ cards }: VisualCanvasProps) {
                                 delay={index}
                             />
                         )}
+                        {(card.type === 'stat-comparison' || card.type === 'comparison' as any) && (
+                            <ComparisonCard
+                                data={card.data as StatComparisonCardData}
+                                delay={index}
+                            />
+                        )}
                     </motion.div>
                 ))}
             </AnimatePresence>
         </div>
     );
 }
-
-// Type imports for VisualCanvas
-import type { Game, PlayerGameStats } from '@/lib/sports/types';

@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { formatChatText } from '@/utils/formatTextContent';
 import { Send, Mic, Paperclip, Image, MapPin, Play, PlayCircle, ExternalLink, FileText, BarChart3, User } from 'lucide-react';
 import { Button } from './ui/button';
@@ -159,9 +160,79 @@ const PerplexityStyleMessage = ({ message, isUser, isTyping = false }) => {
         </div>
       )}
 
-      {/* AI Narrative removed - showing only visual cards */}
+      {/* AI Text Response - Conversational answer */}
+      {text && text.length > 0 && (
+        <div className="mb-8">
+          <div className="bg-[#0a0a0a] rounded-2xl border border-indigo-500/20 shadow-[0_0_15px_rgba(99,102,241,0.1)] overflow-hidden">
+            {/* Widget Header */}
+            <div className="bg-[#111111] px-5 py-3 border-b border-indigo-500/10 flex items-center gap-3">
+              <div className="relative">
+                <div className="w-2.5 h-2.5 rounded-full bg-indigo-500 animate-pulse relative z-10" />
+                <div className="absolute inset-0 w-2.5 h-2.5 rounded-full bg-indigo-500 animate-ping opacity-75" />
+              </div>
+              <span className="text-[11px] font-bold text-indigo-300 uppercase tracking-[0.2em]">Live Analysis</span>
+              <div className="ml-auto flex items-center gap-2">
+                <div className="h-1.5 w-1.5 rounded-full bg-indigo-500/50" />
+                <div className="h-1.5 w-1.5 rounded-full bg-purple-500/50" />
+              </div>
+            </div>
 
-      {/* Summary paragraph removed - showing only visual cards */}
+            <div className="p-6">
+              <div className="prose prose-invert max-w-none text-gray-300 text-base leading-relaxed space-y-4 font-light">
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
+                  components={{
+                    h1: ({ node, ...props }) => (
+                      <div className="flex items-center gap-3 mt-6 mb-4 pb-2 border-b border-gray-800">
+                        <div className="bg-indigo-500/20 p-1.5 rounded-lg">
+                          <BarChart3 className="w-5 h-5 text-indigo-400" />
+                        </div>
+                        <h1 {...props} className="text-xl font-bold text-white tracking-tight m-0" />
+                      </div>
+                    ),
+                    h2: ({ node, ...props }) => (
+                      <div className="flex items-center gap-2 mt-5 mb-3">
+                        <div className="h-5 w-1 bg-purple-500 rounded-full" />
+                        <h2 {...props} className="text-lg font-semibold text-gray-100 m-0" />
+                      </div>
+                    ),
+                    h3: ({ node, ...props }) => (
+                      <h3 {...props} className="text-md font-medium text-indigo-300 mt-4 mb-2 uppercase tracking-wide" />
+                    ),
+                    table: ({ node, ...props }) => (
+                      <div className="overflow-x-auto my-4 rounded-xl border border-gray-800 bg-white/5">
+                        <table {...props} className="w-full text-left text-sm" />
+                      </div>
+                    ),
+                    thead: ({ node, ...props }) => (
+                      <thead {...props} className="bg-gray-900/50 text-gray-400 uppercase tracking-wider font-medium" />
+                    ),
+                    th: ({ node, ...props }) => (
+                      <th {...props} className="px-4 py-3 border-b border-gray-800" />
+                    ),
+                    td: ({ node, ...props }) => (
+                      <td {...props} className="px-4 py-3 border-b border-gray-800/50 text-gray-300" />
+                    ),
+                    ul: ({ node, ...props }) => <ul {...props} className="space-y-2 my-4" />,
+                    li: ({ node, ...props }) => (
+                      <li className="flex gap-3 items-start p-2 rounded-lg hover:bg-white/5 transition-colors">
+                        <span className="text-indigo-500 mt-1 text-[10px]">●</span>
+                        <span className="flex-1 leading-relaxed text-gray-300"><span {...props} /></span>
+                      </li>
+                    ),
+                    strong: ({ node, ...props }) => <span className="font-bold text-indigo-200" {...props} />,
+                    blockquote: ({ node, ...props }) => (
+                      <blockquote {...props} className="border-l-2 border-indigo-500 pl-4 my-4 italic text-gray-400 bg-indigo-500/5 p-3 rounded-r-lg" />
+                    )
+                  }}
+                >
+                  {formatChatText(text)}
+                </ReactMarkdown>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Structured Content or Tabs */}
       {hasStructuredContent ? (

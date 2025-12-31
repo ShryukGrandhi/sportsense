@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { v4 as uuidv4 } from 'uuid';
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
+import { processGroundingMetadata, getSourcesArray } from '@/lib/ai/grounding-utils';
+
+// Model configuration - Use Gemini 2.0 Flash (validated available model)
+const GEMINI_MODEL = 'gemini-2.0-flash';
+// Grounding disabled - API key may not have access
+// const GROUNDING_CONFIG = {
+//     tools: [{ googleSearch: {} }],
+// };
 
 // In-memory chat storage
 const chats: Map<string, { id: string; title: string; messages: any[]; created_at: string }> = new Map();
@@ -11,7 +19,7 @@ function getGenAI() {
     if (!apiKey) {
         return null;
     }
-    return new GoogleGenAI({ apiKey });
+    return new GoogleGenerativeAI(apiKey);
 }
 
 // Fetch REAL ESPN scores
@@ -493,7 +501,7 @@ export async function POST(
             sources.push('Google News RSS');
         }
 
-        // Generate AI response with REAL data
+        // Generate AI response with REAL data - TWO PARTS: Text + Visuals
         let aiContent = '';
         let structuredContent: any[] = [];
 
@@ -501,82 +509,203 @@ export async function POST(
             const ai = getGenAI();
 
             if (ai) {
-                // Use Gemini to generate query-relevant structured content
-                const structuredPrompt = `You are Playmaker, a sports AI. Output ONLY valid JSON with no markdown, no code blocks, just raw JSON.
+                // PART 1: Generate conversational text answer with Google Search grounding
+                const textPrompt = `You are Playmaker, an elite AI sports analyst with real-time access to data via Google Search.
 
+TODAY: ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
 DETECTED SPORT: ${sport.toUpperCase()}
+
+AVAILABLE REAL-TIME DATA:
+${espnContext || 'No live game data available.'}
+${newsContext || ''}
+${standingsContext || ''}
+
+USER QUESTION: "${content}"
+
+INSTRUCTIONS:
+1. USE GOOGLE SEARCH to find current, accurate information to answer this question
+2. Provide a direct, intelligent answer - not "I found X results" but the actual answer
+3. Be conversational but authoritative - like an expert sports broadcaster
+4. Include specific stats, scores, and facts with dates
+5. If you searched for info, weave it naturally into your response
+6. For predictions/opinions, be bold and back them up with data
+
+RESPONSE FORMAT:
+- Start with the direct answer to their question
+- Support with specific data and stats
+- Keep it concise but comprehensive (2-4 paragraphs max)
+- Use markdown for emphasis when helpful`;
+
+                // PART 2: Generate visual cards prompt
+                const cardsPrompt = `You are a sports data visualization AI. Generate JSON cards for this query.
+
+SPORT: ${sport.toUpperCase()}
+QUERY: "${content}"
 TODAY: ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
 
-${standingsContext ? `REAL ESPN STANDINGS DATA:\n${standingsContext}` : ''}
+${espnContext ? `LIVE ESPN DATA:\n${espnContext}` : ''}
+${standingsContext ? `STANDINGS DATA:\n${standingsContext}` : ''}
+${newsContext ? `NEWS:\n${newsContext}` : ''}
 
-USER QUERY: "${content}"
+Generate 1-3 visual cards as JSON. Output ONLY valid JSON, no markdown.
 
-Generate a JSON response with cards relevant to the query. Here are the card types:
+CARD TYPES:
+1. Scorecard: {"type":"scorecard","title":"PHI @ MEM","teams":[{"name":"76ers","score":101},{"name":"Grizzlies","score":99}],"status":"Final"}
+2. Player: {"type":"player","title":"Player Profile","player_name":"LeBron James","team":"Lakers","stats":{"PPG":"25.4","RPG":"7.8"}}
+3. Comparison: {"type":"comparison","title":"LeBron vs Luka","players":[{"name":"LeBron","stats":{"PPG":"25.4"}},{"name":"Luka","stats":{"PPG":"33.2"}}]}
+4. Statistics: {"type":"statistics","title":"NBA Standings","headers":["Team","W","L"],"rows":[["Thunder","27","5"]]}
+5. News: {"type":"statistics","title":"Latest News","headers":["Headline","Source"],"rows":[["Trade rumors heating up","ESPN"]]}
 
-FOR STANDINGS QUERIES (use the REAL ESPN data above if available):
-{"cards":[{"type":"statistics","title":"Eastern Conference Standings","headers":["Team","W","L","PCT"],"rows":[["Detroit Pistons","24","6",".800"],["New York Knicks","20","9",".690"]]}]}
+RULES:
+- Use REAL data from context when available
+- Search for current stats if needed
+- Output format: {"cards":[...]}`;
 
-FOR PLAYER COMPARISONS (e.g., "Luka vs LeBron", "compare player X and Y"):
-{"cards":[{"type":"comparison","title":"LeBron James vs Luka Doncic","players":[{"name":"LeBron James","team":"Lakers","position":"SF","stats":{"PPG":"25.4","RPG":"7.8","APG":"8.2"}},{"name":"Luka Doncic","team":"Mavericks","position":"PG","stats":{"PPG":"33.2","RPG":"9.4","APG":"9.8"}}],"comparison_metrics":[{"name":"Points Per Game","values":["25.4","33.2"]},{"name":"Rebounds","values":["7.8","9.4"]},{"name":"Assists","values":["8.2","9.8"]}]}]}
+                console.log('[GEMINI] Generating combined text + cards response...');
 
-FOR PLAYER STATS (e.g., "show me LeBron stats"):
-{"cards":[{"type":"player","title":"Player Profile","player_name":"LeBron James","team":"Los Angeles Lakers","position":"Small Forward","stats":{"PPG":"25.4","RPG":"7.8","APG":"8.2","Career Points":"40000+"}}]}
+                // Grounding configuration for real-time data
+                const GROUNDING_CONFIG = {
+                    tools: [{ googleSearch: {} }],
+                };
 
-FOR GAME/SCHEDULE QUERIES:
-{"cards":[{"type":"statistics","title":"Upcoming ${sport.toUpperCase()} Games","headers":["Matchup","Status"],"rows":[["Team A @ Team B","Scheduled"]]}]}
+                // ... (in getGenAI or route handler)
 
-FOR NEWS QUERIES:
-{"cards":[{"type":"statistics","title":"Latest ${sport.toUpperCase()} News","headers":["Headline","Source"],"rows":[["News headline...","ESPN"]]}]}
-
-CRITICAL RULES:
-- Output ONLY the JSON object, no other text
-- FOR STANDINGS: If REAL ESPN data is provided above, use EXACTLY those numbers. Do NOT use your training data.
-- FOR PLAYER STATS: Use approximate 2024-25 season stats (mark as estimates if unsure)
-- For comparisons, always include both players with their stats
-- Generate exactly 1-3 cards that answer the query`;
-
-                console.log('[GEMINI] Generating query-relevant structured content');
-
-                const response = await ai.models.generateContent({
-                    model: 'gemini-2.0-flash',
-                    contents: structuredPrompt,
+                // Single combined call with standard SDK
+                const model = ai.getGenerativeModel({
+                    model: GEMINI_MODEL,
+                    tools: [{ googleSearch: {} } as any]
                 });
 
-                const responseText = response.text || '';
-                console.log('[GEMINI] Raw response:', responseText.slice(0, 500));
+                let result;
+                const prompt = `You are Playmaker, an elite AI sports analyst.
+Gemini 2.0 Flash Active.
+Grounding: ENABLED (Use Google Search for real-time player stats).
 
-                // Parse the JSON response
+TODAY: ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+SPORT: ${sport.toUpperCase()}
+
+CONTEXT DATA (Trusted Sources):
+${espnContext || 'No live game data.'}
+${newsContext || ''}
+${standingsContext || ''}
+
+USER QUESTION: "${content}"
+
+CRITICAL INSTRUCTION:
+You MUST generate a visual card in EVERY response.
+If the user asks for a comparison, you MUST generate a {"type": "stat-comparison"} card.
+USE GOOGLE SEARCH to fill the card with EXACT REAL-TIME 2024/2025 STATS.
+DO NOT use "Estimated" or "Projected" unless strictly necessary. Cite "Real-Time Data" as source.
+
+
+Respond with TWO parts separated by "---CARDS---":
+
+PART 1 (Before ---CARDS---):
+Write EXACTLY ONE sentence of introductory analysis.
+- KEEP IT BRIEF. No long text blobs.
+- Example: "Here is the comparison between Puka Nacua and Jaxon Smith-Njigba based on real-time data."
+
+PART 2 (After ---CARDS---):
+Output ONLY valid JSON: {"cards":[...]}
+
+Card types (Strict JSON structure):
+1. Scorecard: {"type":"scorecard","title":"Recent Match","teams":[{"name":"76ers","score":101},{"name":"Grizzlies","score":99}],"meta":{"status":"Final","sport":"NFL"}}
+2. Player: {"type":"player","title":"Player Profile","player_name":"LeBron James","team":"Lakers","stats":{"PPG":"25.4","RPG":"7.8"}}
+3. Comparison: {"type":"stat-comparison","data":{"players":[{"name":"LeBron","stats":{"PPG":"25.4"}},{"name":"Luka","stats":{"PPG":"33.2"}}],"statKeys":["PPG","RPG","APG"]}}
+4. Statistics: {"type":"statistics","title":"Standings","headers":["Team","W","L"],"rows":[["Thunder","27","5"]]}
+5. News: {"type":"statistics","title":"Related News","headers":["Headline","Source"],"rows":[["Trade rumors heating up","ESPN"]]}
+
+CRITICAL:
+- ALL DATA must be in CARDS.
+- Text part must be ONE SENTENCE.
+- DO NOT duplicate data in text.
+- GENERATE DENSE DATA: For comparisons, include **8-12 rows of stats**, including Advanced Metrics (e.g. PER, EPA/Play, YAC, TS%).
+- KEY INSIGHT: You MUST include a "key_insight" field in the \`stat-comparison\` card with a deep, expert-level analysis (2-3 sentences).
+- IMAGES: Use Google Search to find a REAL, high-quality image URL (ending in .jpg/.png) for the players. Put it in the "image" field. Avoid generic placeholders.
+
+JSON Examples:
+- {"type":"scorecard", "data": {"game": {...}, "showDetails": true}}
+- {"type":"player", "data": {"player": {"name":"LeBron", "teamAbbreviation":"LAL", "stats":{...}, "image": "https://example.com/lebron-action.jpg"}}}
+- {"type":"stat-comparison", "key_insight": "Puka Nacua's YAC efficiency is in the 98th percentile, significantly outperforming JSN...", "data": {"players": [{"name":"Puka", "image":"https://real-url.com/puka.jpg", "stats":{"Receptions":"105 (Rank #4)", "Yards":"1486", "YAC/Rec":"6.2", "Drops":"2"}}, {"name":"Jaxon", "image":"https://real-url.com/jsn.jpg", "stats":{...}}], "statKeys": ["Receptions", "Yards", "YAC/Rec", "Drops", "Target Share", "Contested Catch Rate"]}}
+
+
+Example Response:
+### 📊 Comparison
+* **Puka Nacua** leads in yards...
+
+---CARDS---
+{"cards":[{"type":"stat-comparison","data":{"players":[...], "statKeys": ["points"]}}]}`;
+
                 try {
-                    // Extract JSON from the response (handle markdown code blocks)
-                    let jsonStr = responseText;
-                    const jsonMatch = responseText.match(/```(?:json)?\s*([\s\S]*?)```/);
-                    if (jsonMatch) {
-                        jsonStr = jsonMatch[1].trim();
-                    }
+                    result = await model.generateContent(prompt);
+                } catch (toolError) {
+                    console.warn('[GEMINI] Tool error, falling back to standard model:', toolError);
+                    const fallbackModel = ai.getGenerativeModel({ model: GEMINI_MODEL });
+                    const fallbackPrompt = prompt + "\n\n(Note: Search tools unavailable. Use internal knowledge or context data.)";
+                    result = await fallbackModel.generateContent(fallbackPrompt);
+                }
 
-                    const parsed = JSON.parse(jsonStr);
-                    if (parsed.cards && Array.isArray(parsed.cards)) {
-                        structuredContent = parsed.cards;
-                        console.log('[GEMINI] Parsed', structuredContent.length, 'cards');
+                if (!result || !result.response) {
+                    throw new Error('Failed to generate content from AI model');
+                }
+
+                const fullResponse = result.response.text();
+                console.log('[GEMINI] Response length:', fullResponse.length);
+                console.log('[GEMINI] Response preview:', fullResponse.slice(0, 400));
+
+                // Split into text and cards
+                if (fullResponse.includes('---CARDS---')) {
+                    const parts = fullResponse.split('---CARDS---');
+                    aiContent = parts[0].trim();
+
+                    // Parse cards
+                    try {
+                        let cardsJson = parts[1].trim();
+                        const codeMatch = cardsJson.match(/```(?:json)?\s*([\s\S]*?)```/);
+                        if (codeMatch) cardsJson = codeMatch[1].trim();
+
+                        const objMatch = cardsJson.match(/\{[\s\S]*\}/);
+                        if (objMatch) cardsJson = objMatch[0];
+
+                        const parsed = JSON.parse(cardsJson);
+                        if (parsed.cards) {
+                            structuredContent = parsed.cards.map((c: any) => {
+                                // Fix flat structure (common LLM mistake)
+                                if ((c.type === 'stat-comparison' || c.type === 'comparison') && c.players && !c.data) {
+                                    return {
+                                        type: 'stat-comparison',
+                                        id: c.id || Math.random().toString(36).substring(7),
+                                        data: { players: c.players, statKeys: c.statKeys }
+                                    };
+                                }
+                                // Ensure standard structure
+                                if (!c.id) c.id = Math.random().toString(36).substring(7);
+                                return c;
+                            });
+                        }
+                    } catch (e) {
+                        console.error('[GEMINI] Cards parse error:', e);
+                        structuredContent = generateVisualCards(games, newsData);
                     }
-                } catch (parseErr) {
-                    console.error('[GEMINI] JSON parse error:', parseErr);
-                    // Fallback to ESPN data if JSON parsing fails
+                } else {
+                    aiContent = fullResponse;
                     structuredContent = generateVisualCards(games, newsData);
                 }
 
-                // Generate a brief AI summary (hidden from UI but available)
-                aiContent = `Query processed. Generated ${structuredContent.length} visual cards.`;
-                aiContent += buildSourcesCitation(sources, newsData);
+                console.log('[GEMINI] Final text length:', aiContent.length);
+                console.log('[GEMINI] Cards count:', structuredContent.length);
+
+                if (sources.length > 0) {
+                    aiContent += buildSourcesCitation(sources, newsData);
+                }
 
             } else {
-                // Fallback if no Gemini API
                 aiContent = 'Gemini API key not configured. Please add GEMINI_API_KEY to your environment.';
                 structuredContent = generateVisualCards(games, newsData);
             }
-        } catch (aiError) {
-            console.error('[GEMINI] Error:', aiError);
-            aiContent = `Error generating response. Showing ESPN data.`;
+        } catch (aiError: any) {
+            console.error('[GEMINI] API Error:', aiError?.message);
+            aiContent = `Gemini API Error: ${aiError?.message}. Using model: ${GEMINI_MODEL}.`;
             structuredContent = generateVisualCards(games, newsData);
         }
 

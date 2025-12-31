@@ -68,7 +68,7 @@ export const parseMessageContent = (message) => {
   const visualItems = contentItems.filter(item => item.type !== 'text');
 
   return {
-    text: '', // Removed text content - showing only visual cards
+    text: cleanMarkdownArtifacts(cleanPerplexityText(message?.content || '')),
     contentItems: visualItems,
     hasStructuredContent: visualItems.length > 0
   };
@@ -201,6 +201,15 @@ export const parseChatAnswer = (chatAnswer) => {
           collapsible: true
         };
 
+      case 'stat-comparison':
+        return {
+          type: 'stat-comparison',
+          title: card.title || 'Player Comparison',
+          players: card.data?.players || [],
+          comparison_metrics: card.data?.statKeys || [],
+          collapsible: true
+        };
+
       case 'match':
         return {
           type: 'match',
@@ -241,16 +250,22 @@ export const parseChatAnswer = (chatAnswer) => {
     console.log('[AUDIT][PARSE_CHATANSWER]', hv);
   } catch { }
 
-  try {
-    // eslint-disable-next-line no-console
-    console.log('[AUDIT][PARSE_CHATANSWER]', { types: (contentItems || []).map(ci => ci?.type), total: (contentItems || []).length });
-  } catch { }
-
-  // Filter out all text type items - only visual cards should be rendered
-  const visualItems = contentItems.filter(item => item.type !== 'text');
+  // Filter out all text type items and invalid cards
+  const visualItems = contentItems
+    .filter(item => item && item.type !== 'text')
+    // Filter out empty scorecards
+    .filter(item => {
+      if (item.type === 'scorecard') {
+        return item.teams && item.teams.length > 0;
+      }
+      if (item.type === 'scores') {
+        return item.data && item.data.length > 0;
+      }
+      return true;
+    });
 
   return {
-    text: '', // Removed text content - showing only visual cards
+    text: cleanMarkdownArtifacts(cleanPerplexityText(chatAnswer?.text || message?.content || '')),
     contentItems: visualItems,
     hasStructuredContent: visualItems.length > 0
   };

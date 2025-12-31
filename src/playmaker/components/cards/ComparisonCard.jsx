@@ -43,7 +43,8 @@ const ComparisonCard = ({
   chart_data,
   winner_analysis = {},
   title = "Player Comparison",
-  collapsible = true
+  collapsible = true,
+  key_insight
 }) => {
   const [isExpanded, setIsExpanded] = useState(true);
   const [activeView, setActiveView] = useState('stats');
@@ -136,9 +137,9 @@ const ComparisonCard = ({
           </div>
         </div>
 
-        {/* Stats Grid */}
+        {/* Stats Grid - Enhanced Density used to be slice(0,6) */}
         <div className="grid grid-cols-3 gap-3">
-          {Object.entries(player.stats || {}).slice(0, 6).map(([key, value]) => (
+          {Object.entries(player.stats || {}).map(([key, value]) => (
             <div key={key} className="bg-white/5 rounded-lg p-3 text-center backdrop-blur-sm hover:bg-white/10 transition-colors">
               <div className="text-white font-bold text-lg">{value}</div>
               <div className="text-gray-400 text-xs uppercase tracking-wider">{key}</div>
@@ -230,8 +231,8 @@ const ComparisonCard = ({
         <button
           onClick={() => setActiveView('stats')}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${activeView === 'stats'
-              ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg shadow-blue-500/25'
-              : 'bg-gray-800/50 text-gray-400 hover:bg-gray-700/50 hover:text-white'
+            ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg shadow-blue-500/25'
+            : 'bg-gray-800/50 text-gray-400 hover:bg-gray-700/50 hover:text-white'
             }`}
         >
           <Users className="w-4 h-4" />
@@ -240,8 +241,8 @@ const ComparisonCard = ({
         <button
           onClick={() => setActiveView('chart')}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${activeView === 'chart'
-              ? 'bg-gradient-to-r from-cyan-600 to-emerald-600 text-white shadow-lg shadow-cyan-500/25'
-              : 'bg-gray-800/50 text-gray-400 hover:bg-gray-700/50 hover:text-white'
+            ? 'bg-gradient-to-r from-cyan-600 to-emerald-600 text-white shadow-lg shadow-cyan-500/25'
+            : 'bg-gray-800/50 text-gray-400 hover:bg-gray-700/50 hover:text-white'
             }`}
         >
           <BarChart3 className="w-4 h-4" />
@@ -271,6 +272,53 @@ const ComparisonCard = ({
       ) : (
         <ChartView />
       )}
+
+      {/* Category Winners Section */}
+      <div className="mt-6 pt-6 border-t border-gray-800">
+        <div className="flex items-center gap-2 mb-4">
+          <Trophy className="w-4 h-4 text-yellow-500" />
+          <h4 className="text-white text-sm font-semibold">Category Winners</h4>
+        </div>
+        <div className="flex flex-wrap gap-3 mb-6">
+          {/* Calculate winners dynamically if not provided */}
+          {(() => {
+            const stats1 = player1.stats || {};
+            const stats2 = player2.stats || {};
+            const allKeys = [...new Set([...Object.keys(stats1), ...Object.keys(stats2)])];
+
+            return allKeys.slice(0, 10).map(key => { // Increased limit to 10
+              const val1 = parseFloat(stats1[key]) || 0;
+              const val2 = parseFloat(stats2[key]) || 0;
+              if (val1 === val2) return null;
+
+              const winner = val1 > val2 ? player1.name : player2.name;
+              const isP1 = winner === player1.name;
+
+              return (
+                <div key={key} className={`px-3 py-1.5 rounded-full text-xs font-medium border flex items-center gap-2
+                    ${isP1 ? 'bg-blue-500/10 border-blue-500/30 text-blue-200' : 'bg-purple-500/10 border-purple-500/30 text-purple-200'}
+                 `}>
+                  <span className="text-gray-400 uppercase tracking-tight text-[10px]">{key}:</span>
+                  <span>{winner}</span>
+                </div>
+              );
+            });
+          })()}
+        </div>
+
+        {/* Analyst Insight Section (NEW) */}
+        {(key_insight || winner_analysis?.content) && (
+          <div className="bg-gradient-to-r from-indigo-900/30 to-purple-900/30 border border-indigo-500/30 rounded-xl p-4 mt-6">
+            <div className="flex items-center gap-2 mb-2">
+              <Zap className="w-4 h-4 text-indigo-400" />
+              <h4 className="text-indigo-200 text-sm font-semibold uppercase tracking-wider">Analyst Insight</h4>
+            </div>
+            <p className="text-gray-300 text-sm leading-relaxed">
+              {key_insight || winner_analysis?.content || "Detailed analysis not available."}
+            </p>
+          </div>
+        )}
+      </div>
     </div>
   );
 

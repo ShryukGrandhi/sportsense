@@ -261,7 +261,7 @@ const StructuredContentRenderer = ({ contentItems = [], activeMediaTab = 'All' }
       Videos: items.filter(i => ['highlight_video', 'videos'].includes(i.type)),
       Images: items.filter(i => ['image_gallery', 'images'].includes(i.type)),
       Stats: items.filter(i => ['scorecard', 'statistics', 'stats'].includes(i.type)),
-      Players: items.filter(i => ['player', 'top_player', 'comparison'].includes(i.type)),
+      Players: items.filter(i => ['player', 'top_player', 'comparison', 'stat-comparison'].includes(i.type)),
     };
     return mapping[tab] || [];
   };
@@ -573,29 +573,36 @@ const StructuredContentRenderer = ({ contentItems = [], activeMediaTab = 'All' }
             );
           }
 
-          case 'comparison':
+          case 'stat-comparison':
+          case 'comparison': {
+            // Support both flat 'players' and nested 'data.players' structures
+            const players = item.players || (data && data.players) || (item.data && item.data.players);
+
             return collapsible ? (
-              <CollapsibleSection key={index} title={title} icon={Users}>
+              <CollapsibleSection key={index} title={title || "Comparison"} icon={Users}>
                 <ComparisonCard
-                  players={item.players}
-                  comparison_metrics={item.comparison_metrics}
+                  players={players}
+                  comparison_metrics={item.comparison_metrics || data?.statKeys}
                   chart_data={item.chart_data}
                   winner_analysis={item.winner_analysis}
-                  title={title}
+                  title={title || "Comparison"}
                   collapsible={false}
+                  key_insight={item.key_insight}
                 />
               </CollapsibleSection>
             ) : (
               <ComparisonCard
                 key={index}
-                players={item.players}
-                comparison_metrics={item.comparison_metrics}
+                players={players}
+                comparison_metrics={item.comparison_metrics || data?.statKeys}
                 chart_data={item.chart_data}
                 winner_analysis={item.winner_analysis}
-                title={title}
+                title={title || "Comparison"}
                 collapsible={false}
+                key_insight={item.key_insight}
               />
             );
+          }
 
           case 'trend':
             return collapsible ? (

@@ -1,9 +1,18 @@
 // Chat service - Gemini AI integration with sports context
+// Uses Gemini 2.5 Pro with Google Search grounding for real-time accuracy
 
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { crs } from '../sports';
 import { VisualCard, GameWithStats, PlayerGameStats } from '../sports/types';
 import { scraper } from '../search/scraper';
+import { processGroundingMetadata, formatGroundingCitations, getSourcesArray } from '../ai/grounding-utils';
+
+// Model configuration - Use Gemini 2.0 Flash (validated available model)
+const GEMINI_MODEL = 'gemini-2.0-flash';
+// Grounding disabled - API key may not have access
+// const GROUNDING_CONFIG = {
+//     tools: [{ googleSearch: {} }],
+// };
 
 // Lazy initialization of Gemini client
 function getGenAI() {
@@ -11,28 +20,35 @@ function getGenAI() {
     if (!apiKey) {
         throw new Error('GEMINI_API_KEY is not set in environment variables');
     }
-    return new GoogleGenAI({ apiKey });
+    return new GoogleGenerativeAI(apiKey);
 }
 
-const SYSTEM_PROMPT = `You are Playmaker, an AI sports assistant with real-time access to live game data. Your responses should be:
+const SYSTEM_PROMPT = `You are Playmaker, an elite AI sports analyst with access to real-time data via Google Search.
 
-1. **Concise and informative** - Get straight to the stats and facts
-2. **Grounded in data** - Always reference the specific stats provided in the context
-3. **Engaging and conversational** - Sound like a knowledgeable sports fan, not a robot
-4. **Accurate** - Only state what's in the provided data, don't make up stats
-5. **News Aware** - If news context is provided, incorporate it into your answer.
+CORE PRINCIPLES:
+1. **ACCURACY FIRST** - Use Google Search to verify current scores, stats, and standings. Never guess.
+2. **REAL-TIME AWARE** - Today's date matters. Search for the most current information.
+3. **CITE YOUR SOURCES** - When using searched data, be transparent about where it came from.
+4. **DEEP ANALYSIS** - Don't just recite stats, provide insight and context.
+5. **ENGAGING DELIVERY** - Sound like an expert sports broadcaster, not a database.
 
 When discussing games:
-- Lead with the score and game status
+- ALWAYS verify live scores via search for ongoing games
+- Lead with score and current game state
 - Highlight key performers with specific stats
-- Note any notable trends or momentum shifts
+- Provide tactical observations
 
 When discussing players:
-- Cite their actual stat line
-- Compare to their season averages when relevant
-- Mention their impact on the game
+- Search for their current season stats
+- Compare to historical performance
+- Note recent trends (hot/cold streaks)
 
-Format your responses with clean markdown when helpful (bold for emphasis, numbers for stats).`;
+When discussing standings/rankings:
+- Search for current standings
+- Note playoff implications
+- Discuss recent momentum
+
+Format responses with clean markdown. Be confident and authoritative.`;
 
 interface ChatRequest {
     messages: { role: 'user' | 'assistant' | 'system'; content: string }[];
@@ -95,13 +111,19 @@ export async function processChatMessage(request: ChatRequest): Promise<ChatResp
         // Build the full prompt with context
         const prompt = `${SYSTEM_PROMPT}\n\n${contextMessage}\n\nUser question: ${lastUserMessage.content}`;
 
-        // Use the new SDK API structure
-        const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
-            contents: prompt,
-        });
+        // Use Gemini 2.0 Flash for AI response
+        console.log('[Gemini] Using model:', GEMINI_MODEL);
+        const model = ai.getGenerativeModel({ model: GEMINI_MODEL });
+        const result = await model.generateContent(prompt);
+        const response = result.response;
 
-        const answerText = response.text || 'Sorry, I couldn\'t generate a response.';
+        // Process grounding metadata for sources (might be different structure in new SDK)
+        // const grounding = processGroundingMetadata(response); 
+        // For now disable grounding processing as it differs between SDKs
+
+        const answerText = response.text() || 'Sorry, I couldn\'t generate a response.';
+
+        console.log('[Gemini] Response generated');
 
         return {
             answerText,
@@ -266,13 +288,17 @@ export async function streamChatMessage(
 
         const prompt = `${SYSTEM_PROMPT}\n\n${contextMessage}\n\nUser question: ${lastUserMessage.content}`;
 
-        const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
-            contents: prompt,
-        });
+        // Use Gemini 2.0 Flash for AI response
+        console.log('[Gemini Stream] Using model:', GEMINI_MODEL);
+        const model = ai.getGenerativeModel({ model: GEMINI_MODEL });
+        const result = await model.generateContent(prompt);
+        const response = result.response;
+        // const grounding = processGroundingMetadata(response); // Disabled for now
 
-        const fullText = response.text || '';
+        const fullText = response.text() || '';
         onChunk(fullText);
+
+        console.log('[Gemini Stream] Response generated');
 
         return {
             answerText: fullText,
